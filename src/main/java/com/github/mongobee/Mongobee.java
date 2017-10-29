@@ -15,6 +15,9 @@ import org.jongo.Jongo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.NoSuchBeanDefinitionException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.Environment;
 import org.springframework.data.mongodb.core.MongoTemplate;
 
@@ -49,6 +52,8 @@ public class Mongobee implements InitializingBean {
 
   private MongoTemplate mongoTemplate;
   private Jongo jongo;
+  @Autowired
+  private ApplicationContext context;
 
 
   /**
@@ -170,7 +175,17 @@ public class Mongobee implements InitializingBean {
 
       Object changelogInstance = null;
       try {
-        changelogInstance = changelogClass.getConstructor().newInstance();
+        if (context != null) {
+          try {
+            changelogInstance = context.getBean(changelogClass);
+          } catch (NoSuchBeanDefinitionException e) {
+            logger.debug("No Spring bean of type '" + changelogClass.getName() + "' found");
+          }
+        }
+        if (changelogInstance == null) {
+          changelogInstance = changelogClass.getConstructor().newInstance();
+        }
+
         List<Method> changesetMethods = service.fetchChangeSets(changelogInstance.getClass());
 
         for (Method changesetMethod : changesetMethods) {
@@ -205,31 +220,35 @@ public class Mongobee implements InitializingBean {
     }
   }
 
-  private Object executeChangeSetMethod(Method changeSetMethod, Object changeLogInstance, DB db, MongoDatabase mongoDatabase)
-      throws IllegalAccessException, InvocationTargetException, MongobeeChangeSetException {
-    if (changeSetMethod.getParameterTypes().length == 1
-        && changeSetMethod.getParameterTypes()[0].equals(DB.class)) {
+  private Object executeChangeSetMethod(Method changeSetMethod, Object changeLogInstance, DB db,
+                                        MongoDatabase mongoDatabase) throws IllegalAccessException,
+                                                                            InvocationTargetException,
+                                                                            MongobeeChangeSetException {
+    if (changeSetMethod.getParameterTypes().length == 1 && changeSetMethod.getParameterTypes()[0].equals(DB.class)) {
       logger.debug("method with DB argument");
 
       return changeSetMethod.invoke(changeLogInstance, db);
-    } else if (changeSetMethod.getParameterTypes().length == 1
-        && changeSetMethod.getParameterTypes()[0].equals(Jongo.class)) {
+    } else if (changeSetMethod.getParameterTypes().length == 1 &&
+        changeSetMethod.getParameterTypes()[0].equals(Jongo.class)) {
       logger.debug("method with Jongo argument");
 
       return changeSetMethod.invoke(changeLogInstance, jongo != null ? jongo : new Jongo(db));
-    } else if (changeSetMethod.getParameterTypes().length == 1
-        && changeSetMethod.getParameterTypes()[0].equals(MongoTemplate.class)) {
+    } else if (changeSetMethod.getParameterTypes().length == 1 &&
+        changeSetMethod.getParameterTypes()[0].equals(MongoTemplate.class)) {
       logger.debug("method with MongoTemplate argument");
 
-      return changeSetMethod.invoke(changeLogInstance, mongoTemplate != null ? mongoTemplate : new MongoTemplate(db.getMongo(), dbName));
-    } else if (changeSetMethod.getParameterTypes().length == 2
-        && changeSetMethod.getParameterTypes()[0].equals(MongoTemplate.class)
-        && changeSetMethod.getParameterTypes()[1].equals(Environment.class)) {
+      return changeSetMethod
+          .invoke(changeLogInstance, mongoTemplate != null ? mongoTemplate : new MongoTemplate(db.getMongo(), dbName));
+    } else if (changeSetMethod.getParameterTypes().length == 2 &&
+        changeSetMethod.getParameterTypes()[0].equals(MongoTemplate.class) &&
+        changeSetMethod.getParameterTypes()[1].equals(Environment.class)) {
       logger.debug("method with MongoTemplate and environment arguments");
 
-      return changeSetMethod.invoke(changeLogInstance, mongoTemplate != null ? mongoTemplate : new MongoTemplate(db.getMongo(), dbName), springEnvironment);
-    } else if (changeSetMethod.getParameterTypes().length == 1
-        && changeSetMethod.getParameterTypes()[0].equals(MongoDatabase.class)) {
+      return changeSetMethod
+          .invoke(changeLogInstance, mongoTemplate != null ? mongoTemplate : new MongoTemplate(db.getMongo(), dbName),
+              springEnvironment);
+    } else if (changeSetMethod.getParameterTypes().length == 1 &&
+        changeSetMethod.getParameterTypes()[0].equals(MongoDatabase.class)) {
       logger.debug("method with DB argument");
 
       return changeSetMethod.invoke(changeLogInstance, mongoDatabase);
@@ -346,7 +365,7 @@ public class Mongobee implements InitializingBean {
 
   /**
    * Overwrites a default mongobee changelog collection hardcoded in DEFAULT_CHANGELOG_COLLECTION_NAME.
-   *
+   * <p>
    * CAUTION! Use this method carefully - when changing the name on a existing system,
    * your changelogs will be executed again on your MongoDB instance
    *

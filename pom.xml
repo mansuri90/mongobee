@@ -7,7 +7,7 @@
     <description>MongoDB data migration tool for Java</description>
     <url>https://github.com/mongobee/mongobee</url>
 
-    <groupId>com.github.mongobee</groupId>
+    <groupId>com.hasintech.ubiprocess</groupId>
     <artifactId>mongobee</artifactId>
     <version>0.14-SNAPSHOT</version>
 
@@ -33,16 +33,16 @@
         </developer>
     </developers>
 
-    <distributionManagement>
-        <snapshotRepository>
-            <id>ossrh</id>
-            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-        </snapshotRepository>
-        <repository>
-            <id>ossrh</id>
-            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
-        </repository>
-    </distributionManagement>
+  <distributionManagement>
+    <snapshotRepository>
+      <id>hasin</id>
+      <url>http://maven.hasintech.local/artifactory/libs-snapshot-local</url>
+    </snapshotRepository>
+    <repository>
+      <id>hasin</id>
+      <url>http://maven.hasintech.local/artifactory/libs-release-local</url>
+    </repository>
+  </distributionManagement>
 
     <properties>
         <spring.version>4.0.6.RELEASE</spring.version>
